@@ -3,7 +3,7 @@
 ####
 
 import numpy as np
-from math import sin
+from math import sin, radians
 #import matplotlib.pyplot as pl
 
 #import the input file
@@ -35,6 +35,7 @@ t_final =  10
 def propensities(X,k,t):
         R = np.zeros((3,1))
         R[0] = k[0]*X[0]*X[1]
+        #R[1] = k[1]*0.5*(sin(radians(180.0*t))+2.0)
         R[1] = k[1]*0.5*(sin(180*t)+2)
         R[2] = k[2]*X[1]*X[2]
         return R
@@ -42,7 +43,7 @@ def propensities(X,k,t):
 def propensities_B(X,k):
         R = np.zeros((3,1))
         R[0] = k[0]*X[0]*X[1]
-        R[1] = k[1]*0.5*(1+2)
+        R[1] = 0.15
         R[2] = k[2]*X[1]*X[2]
         return R
 # <------------------------------>
@@ -60,7 +61,7 @@ def Time_To_Next_Reaction(lam):
 
 	return (1.0/lam)*np.log(1.0/r)
 
-def Find_Reaction_Index(a):
+def Find_Reaction_Index(a,u2):
 	"""	
 	@brief The function takes in the reaction rate vector and returns
 	the index of the reaction to be fired of a possible reaction candidate.
@@ -68,11 +69,8 @@ def Find_Reaction_Index(a):
 
 	"""
 	# small hack as the numpy uniform random number includes 0
-	r = np.random.rand()
-	while r == 0:
-		r = np.random.rand()
 
-	return np.sum(np.cumsum(a) < r*np.sum(a))
+	return np.sum(np.cumsum(a) < u2*np.sum(a))
 
 def SSA(Stochiometry,X0,t_final,k):
 	"""
@@ -97,15 +95,17 @@ def SSA(Stochiometry,X0,t_final,k):
 
 	while t < t_final:
 		B = propensities_B(x,k)
-		tau = Time_To_Next_Reaction(np.sum(B))
-
+		tau= Time_To_Next_Reaction(np.sum(B))
 		if (t + tau > t_final) or (np.sum(B) == 0):
 			return np.array(X_store),np.array(T_store)
 		else:
 			t = t + tau 
-			a = propensities(x,k,t)
-			if np.random.rand()<=np.sum(a)/np.sum(B):
-				j = Find_Reaction_Index(a)
+			a = propensities(x,k,t-tau)
+			u2 = np.random.rand()
+			while u2==0:
+				u2= np.random.rand()
+			if u2<np.sum(a)/np.sum(B):
+				j = Find_Reaction_Index(a,u2)
 				x = x + Stochiometry[:,[j]]
 				X_store.append(x[1,0])
 				T_store.append(t)

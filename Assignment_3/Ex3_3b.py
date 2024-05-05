@@ -13,7 +13,7 @@ X0 = np.array([
 In = np.loadtxt('Input.txt') #seed and number of simulations
 #set the seed and the number of simulations from the input file
 np.random.seed(seed=int(In[0]))
-NrSimulations = int(In[1])
+NrSimulations = 300
 
 #-----Fixed Quantities-----
 # Stoichiometric matrix
@@ -28,7 +28,7 @@ S = np.array([  [1,  0,  -1],#X1
 #reaction parameters
 k = [1,1, 0.01]
 
-t_final =  30
+t_final =  100
 
 # <------------------------------>
 
@@ -117,20 +117,22 @@ def SSA(Stochiometry,X0,t_final,k):
 			X2_store.append(x[1,0])
 			T_store.append(t)
 
+X0_stateses = []
 # Run a number of simulations and save the respective trajectories
-for i in range(NrSimulations):
+for i in range(100):
 	# get a single realisation
 	states, states2,times = SSA(S,X0,t_final,k)
-	times = np.append(times,t_final+0.9999)
-	states=np.append(states,states[-1])
-	states2=np.append(states2,states2[-1])
 	##a) save trajectory
+	times =np.append(times,100.99)
+	states= np.append(states,states[-1])
+	states2= np.append(states2,states2[-1])
 	X0_states = [states[0]]
 	X1_states = [states2[0]]
 	new_times = [0.0]
 	X0_prev = -1
 	X1_prev = -1
 	cur = 1.0
+	# print(times[-1])
 	for j in range(len(times)):
 		while times[j] >cur:
 			new_times.append(cur)
@@ -144,9 +146,37 @@ for i in range(NrSimulations):
 			X1_states.append(states2[j])
 		X0_prev = states[j]
 		X1_prev = states2[j]
+	X0_stateses.append(X0_states)
+
+means = []
+sds = []
+times = list(range(101))
+# for i in X0_stateses:
+# 	print(len(i))
+from statistics import stdev, mean
+for i in range(len(X0_stateses[0])):
+	numbers = []
+	for j in range(100):
+		numbers.append(X0_stateses[j][i])
+	means.append(mean(numbers))
+	sds.append(stdev(numbers))
+
+import matplotlib.pyplot as plt
 
 
+means_plus = []
+means_minus = []
+for i in range(len(means)):
+	means_plus.append(means[i]+sds[i])
+	means_minus.append(means[i]-sds[i])
 
-	Output = np.concatenate((np.array(new_times,ndmin=2),np.array(X0_states,ndmin=2),np.array(X1_states,ndmin=2)), axis=0)
-	# Output = np.concatenate((np.array(times,ndmin=2),np.array(states,ndmin=2)), axis=0)
-	np.savetxt('Task3bTraj'+str(i+1)+'Timed.txt',Output,delimiter = ',',fmt='%1.2f');	
+plt.plot(times,means,label="mean")
+plt.plot(times,means_plus,label="mean+sd")
+plt.plot(times,means_minus,label="mean-sd")
+plt.xlabel("Time")
+plt.ylabel("x1 value")
+plt.title("Ex.3b")
+plt.legend()
+plt.show()
+
+

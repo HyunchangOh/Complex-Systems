@@ -12,15 +12,19 @@ In = np.loadtxt('Input.txt')
 np.random.seed(seed=int(In))
 
 #set initial parameter estimates
-ka = 0.5
-ke = 0.3
+ka = np.random.rand()
+ke = np.random.rand()
 
 
 # loads the input data
 t, data = np.load('Data.npy')
+print((t))
+print("-----------------------------------")
+print((data))
+print("-----------------------------------")
 #settings of the metropolis hastings algorithm
-niters = 10#
-burnin = -1#np.round(0.9*niters)
+niters = 100000
+burnin = np.round(0.9*niters)
 
 #for evaluating the performance [optional]
 naccept = 0
@@ -71,7 +75,7 @@ min2 = 0
 max2 = 1
 
 # data for the proposal distributions
-sigma_p = 0.1
+sigma_p = 0.05
 
 # parameters for likelihood
 sigma_L = 10
@@ -120,6 +124,9 @@ Theta_s.append(theta)
 ###  Start iterating ###
 for i in range(niters):
     # 1. propose parameters 
+    # ka_p = np.exp(np.random.normal(np.log(ka),sigma_p))                                 # <-----------
+    # ke_p = np.exp(np.random.normal(np.log(ke),sigma_p))                               # <-----------
+    
     ka_p = np.exp(np.random.normal(np.log(ka),sigma_p))                                 # <-----------
     ke_p = np.exp(np.random.normal(np.log(ke),sigma_p))
     # 1b. Compute Proposal distributions: 
@@ -155,61 +162,63 @@ for i in range(niters):
     if i > burnin:
         Theta_s.append(theta)
     Acc_t.append(naccept)
+    if i%500==0:
+        print(i)
 np.savetxt('Task3ParamEstimates.txt',Theta_s,delimiter = ',',fmt='%1.2f');	
 #### End of Metropolis Hastings ####
 # comment out below for plots #
 
 
-# # a) Analyze efficiency    
-# print("Efficiency = ", naccept/niters)
+# a) Analyze efficiency    
+print("Efficiency = ", naccept/niters)
 
-# ## Format output and plot
-# Theta_s = np.array(Theta_s,ndmin=2)
-# ka_s = Theta_s[:,0].flatten(order='F')
-# ke_s = Theta_s[:,1].flatten(order='F')
+## Format output and plot
+Theta_s = np.array(Theta_s,ndmin=2)
+ka_s = Theta_s[:,0].flatten(order='F')
+ke_s = Theta_s[:,1].flatten(order='F')
 
-# ##Histogram of parameter estimates (marginal distributions)
-# fig, (ax0, ax1) = plt.subplots(nrows=2)
-# ax0.hist(ka_s, bins=40, density = True)
-# ax1.hist(ke_s, bins=40, density = True)
+##Histogram of parameter estimates (marginal distributions)
+fig, (ax0, ax1) = plt.subplots(nrows=2)
+ax0.hist(ka_s, bins=40, density = True)
+ax1.hist(ke_s, bins=40, density = True)
 
-# ## Plot acceptance rate convergence 
-# Acc_t = np.array(Acc_t)
-# fig, ax_0 = plt.subplots(nrows=1)
-# xvalues = range(niters)
-# ax_0.plot(xvalues[1:],Acc_t[1:]/xvalues[1:],'k-o')
-# plt.xlabel("iterations")
-# plt.ylabel("acceptance rate")
-# ax_0.set_yscale('log')
+## Plot acceptance rate convergence 
+Acc_t = np.array(Acc_t)
+fig, ax_0 = plt.subplots(nrows=1)
+xvalues = range(niters)
+ax_0.plot(xvalues[1:],Acc_t[1:]/xvalues[1:],'k-o')
+plt.xlabel("iterations")
+plt.ylabel("acceptance rate")
+ax_0.set_yscale('log')
 
-# ## Contour plot of parameter estimates
-# NrGridPoints = 50
-# xmin = ka_s.min()
-# xmax = ka_s.max()
-# ymin = ke_s.min()
-# ymax = ke_s.max()
-# X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
-# positions = np.vstack([X.ravel(), Y.ravel()])
-# values = np.vstack([ka_s,ke_s])
-# kernel = stats.gaussian_kde(values)
-# Z = np.reshape(kernel(positions).T, X.shape)
-# fig, ax = plt.subplots()
-# ax.contour(X, Y, Z)
-# ax.set_xlim([xmin, xmax])
-# ax.set_ylim([ymin, ymax])
-# plt.xlabel("ka")
-# plt.ylabel("ke")
-# plt.show()
+## Contour plot of parameter estimates
+NrGridPoints = 50
+xmin = ka_s.min()
+xmax = ka_s.max()
+ymin = ke_s.min()
+ymax = ke_s.max()
+X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+positions = np.vstack([X.ravel(), Y.ravel()])
+values = np.vstack([ka_s,ke_s])
+kernel = stats.gaussian_kde(values)
+Z = np.reshape(kernel(positions).T, X.shape)
+fig, ax = plt.subplots()
+ax.contour(X, Y, Z)
+ax.set_xlim([xmin, xmax])
+ax.set_ylim([ymin, ymax])
+plt.xlabel("ka")
+plt.ylabel("ke")
+plt.show()
 
-# ## sanity check: prediction with  
-# ka = np.median(ka_s)
-# ke = np.median(ke_s)
-# print(ka)
-# print(ke)
-# times = np.arange(t[0],t[-1],0.1)
-# x = model(ka,ke,times,X0)
-# plt.plot(times,x)
-# plt.plot(times,data,'s--')
-# plt.xlabel("time")
-# plt.ylabel("concentration")
-# plt.show()
+## sanity check: prediction with  
+ka = np.median(ka_s)
+ke = np.median(ke_s)
+print(ka)
+print(ke)
+times = np.arange(t[0],t[-1],0.1)
+x = model(ka,ke,times,X0)
+plt.plot(times,x)
+plt.plot(times,data,'s--')
+plt.xlabel("time")
+plt.ylabel("concentration")
+plt.show()

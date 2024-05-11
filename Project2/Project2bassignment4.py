@@ -4,10 +4,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
-from scipy.stats import gaussian_kde
 import scipy, math
-import seaborn as sns
-from mpl_toolkits.mplot3d import Axes3D
+
 #set seed
 In = np.loadtxt('Input.txt')
 np.random.seed(seed=int(In))
@@ -122,74 +120,62 @@ for i in range(niters):
     if i > burnin:
         Theta_s.append(theta)
     Acc_t.append(naccept)
-
+np.savetxt('Project2.txt',Theta_s,delimiter = ',',fmt='%1.2f');	
 #### End of Metropolis Hastings ####
 # comment out below for plots #
-# Step 2: Marginal Empirical Distributions
-data = np.array(Theta_s,ndmin=2)
 
 
 
+# # a) Analyze efficiency    
+# print("Efficiency = ", naccept/niters)
 
+## Format output and plot
+Theta_s = np.array(Theta_s,ndmin=2)
+lambda_s = Theta_s[:,0].flatten(order='F')
+delta_s = Theta_s[:,1].flatten(order='F')
 
-# Step 2: Marginal Empirical Distributions
-lambda_values = data[:, 0]
-delta_values = data[:, 1]
+##Histogram of parameter estimates (marginal distributions)
+fig, (ax0, ax1) = plt.subplots(nrows=2)
+ax0.hist(lambda_s, bins=40, density = True)
+ax1.hist(delta_s, bins=40, density = True)
 
-# Create histograms for each parameter
-plt.figure(figsize=(12, 6))
+## Plot acceptance rate convergence 
+Acc_t = np.array(Acc_t)
+fig, ax_0 = plt.subplots(nrows=1)
+xvalues = range(niters)
+ax_0.plot(xvalues[1:],Acc_t[1:]/xvalues[1:],'k-o')
+plt.xlabel("iterations")
+plt.ylabel("acceptance rate")
+ax_0.set_yscale('log')
 
-plt.subplot(1, 2, 1)
-plt.hist(lambda_values, bins=30, color='blue', alpha=0.7)
-plt.title('Histogram of λ')
-plt.xlabel('λ')
-plt.ylabel('Frequency')
-
-plt.subplot(1, 2, 2)
-plt.hist(delta_values, bins=30, color='green', alpha=0.7)
-plt.title('Histogram of δ')
-plt.xlabel('δ')
-plt.ylabel('Frequency')
-
-plt.tight_layout()
+## Contour plot of parameter estimates
+NrGridPoints = 50
+xmin = lambda_s.min()
+xmax = lambda_s.max()
+ymin = delta_s.min()
+ymax = delta_s.max()
+X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+positions = np.vstack([X.ravel(), Y.ravel()])
+values = np.vstack([lambda_s,delta_s])
+kernel = stats.gaussian_kde(values)
+Z = np.reshape(kernel(positions).T, X.shape)
+fig, ax = plt.subplots()
+ax.contour(X, Y, Z)
+ax.set_xlim([xmin, xmax])
+ax.set_ylim([ymin, ymax])
+plt.xlabel("λ")
+plt.ylabel("δ")
 plt.show()
 
-# Step 3: Joint Distribution - Contour plot with line and scatter plot
-plt.figure(figsize=(8, 6))
-
-# Generate a kernel density estimate for the joint distribution
-kde = gaussian_kde(data.T)
-
-# Define the range for the contour plot
-lambda_range = np.linspace(5,30, 100)
-delta_range = np.linspace(0.05,0.30, 100)
-Lambda, Delta = np.meshgrid(lambda_range, delta_range)
-positions = np.vstack([Lambda.ravel(), Delta.ravel()])
-
-# Evaluate the density at each point in the range
-density = np.reshape(kde(positions).T, Lambda.shape)
-
-# Plot the contour plot
-plt.contour(Lambda, Delta, density, cmap='viridis', levels=10)
-
-# Add a colorbar
-plt.colorbar(label='Density')
-
-# Plot the line (λ, 0.01λ)
-line_lambda = np.linspace(5,30, 100)
-line_delta = 0.01 * line_lambda
-plt.plot(line_lambda, line_delta, color='red', label='(λ, 0.01λ)')
-
-# Plot scatter plot
-plt.scatter(lambda_values, delta_values, color='black', alpha=0.3, label='Data')
-
-# Set y-axis limit based on delta quantiles
-# delta_quantiles = np.percentile(delta_values, [5, 95])
-plt.ylim(0.05,0.30)
-plt.xlim(5,30)
-plt.xlabel('λ')
-plt.ylabel('δ')
-plt.title('Joint Distribution of λ and δ')
-plt.legend()
-
-plt.show()
+# ## sanity check: prediction with  
+# ka = np.median(lambda_s)
+# ke = np.median(delta_s)
+# print(ka)
+# print(ke)
+# times = np.arange(t[0],t[-1],0.1)
+# x = model(ka,ke,times,X0)
+# plt.plot(times,x)
+# plt.plot(times,data,'s--')
+# plt.xlabel("time")
+# plt.ylabel("concentration")
+# plt.show()

@@ -5,19 +5,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
-import scipy
+import scipy, math
 
 #set seed
 In = np.loadtxt('Input.txt')
 np.random.seed(seed=int(In))
 
 #set initial parameter estimates
-ka = 0.5
-ke = 0.3
+theta1 = 30
+theta2 = 3
 
 
-# loads the input data
-t, data = np.load('Data.npy')
+Y = np.array([108,108,101,108,109,91,108,97,92,98])
+t = 100
+
 #settings of the metropolis hastings algorithm
 niters = 10#
 burnin = -1#np.round(0.9*niters)
@@ -26,72 +27,35 @@ burnin = -1#np.round(0.9*niters)
 naccept = 0
 Acc_t = []
 
-# model specifications
-X0 = 200
-X1 = 0
-
-
-X0 = np.array([200,0])
-
-#-----Fixed Quantities-----
-# Stoichiometric matrix
-
-# <------- fill in the model specifics ---->
-
-#               r1   r2  r3 
-S = np.array([  [-1,  0],#X1
-                [1,  -1]])#X3
-
-#reaction parameters
-k = [0.5, 0.3]
-
-# <------------------------------>
-
-# <------- fill in the reaction rate functions ---->
-#reaction propensities
-def propensities(X,k):
-        R = np.zeros((2,1))
-        R[0] = k[0]*X[0]
-        R[1] = k[1]*X[1]
-        return R
-# <------------------------------>
-
-def RHS(t,X,k):
-	R = propensities(X,k)
-	dx = np.dot(S,R)
-	return dx
-
-
-
-#### Parameters for the priors, proposal and likelihood ####
-# data for computing the priors
-min1 = 0
-max1 = 1
-min2 = 0
-max2 = 1
-
 # data for the proposal distributions
-sigma_p = 0.1
-
-# parameters for likelihood
-sigma_L = 10
+sigma_p = 3
 
 #model  x(t) = 
-def model(ka,ke,t,X0):
-    sol = scipy.integrate.solve_ivp(RHS,[t[0],t[-1]],y0=X0,args=[[ka,ke]],vectorized=True,t_eval=t)
-    return sol['y'][1]
-  
+def model(l,d):
+    return (l/d)*(1-np.exp(-d*t))
+
+mu1 = 15
+sigma1_sq = 5
+# theta1 = lambda_
+mu2 = 1
+sigma2_sq = 10
+# theta2 = delta_
+
 #Likelihood   L = prod()
-def likelihood(x,data,sigma):
-    L = np.prod(stats.norm.pdf(data,loc=x,scale=sigma))
-    return L
+def likelihood(l,d):
+    prod = 0
+    x =model(l,d)
+    for y in Y:
+        for i in range(y):
+            prod-=np.log(i+1)
+        prod+=np.log(x)*y-x
+    return -prod
+
 
 #prior distribution (for one parameter) v = 
-def prior(min,max,y):  
-    if y < min or y > max:
-        return 0
-    else:
-        return 1 / (max - min)
+def prior(theta, mu,sigma_sq):
+    exp_up = -(pow((theta-mu),2)/(2*sigma_sq))
+    return (1/math.sqrt(2*sigma_sq*math.pi))*np.exp(exp_up)
 
 #proposal distribution probability (for one parameter)
 def proposal_prob(toParam,fromParam,sigma_p):
@@ -101,61 +65,62 @@ def proposal_prob(toParam,fromParam,sigma_p):
 ### Begin of Metropolis Hastings Algorithm ###
 
 # Initialize
-# 2a. evaluate model at times t_i with parameters ka and ke
-x = model(ka,ke,t,X0)
-
+# 2a. evaluate model at times t_i with parameters ka and ke 
 # 2b. compute likelihood
-l = likelihood(x,data,sigma_L)
+l_a = likelihood(theta1,theta2)
 # 2b. compute priors
-Prior_theta = prior(min1,max1,ka)*prior(min2,max2,ke)#
+Prior_theta = prior(theta1,mu1,sigma1_sq)*prior(theta2,mu2,sigma2_sq)#
 
 # Compute L * v (likelihood times prior)
-posterior = Prior_theta * l
-
+posterior = Prior_theta * l_a
 #store current parameter values
-theta = [ka,ke]
+theta = [theta1,theta2]
 Theta_s = []
 Theta_s.append(theta)
 
 ###  Start iterating ###
 for i in range(niters):
     # 1. propose parameters 
-    ka_p = np.exp(np.random.normal(np.log(ka),sigma_p))                                 # <-----------
-    ke_p = np.exp(np.random.normal(np.log(ke),sigma_p))
+    theta1_p = np.random.normal(theta1,sigma_p)     
+    theta2_p = np.random.normal(theta2,sigma_p)                            # <-----------
+    if theta1_p<0 or theta2_p<0:
+        if i > burnin:
+            Theta_s.append(theta)
+        continue
     # 1b. Compute Proposal distributions: 
     # Q(theta|theta')
-    Q_Current_from_proposed = proposal_prob(ka,ka_p,sigma_p)*proposal_prob(ke,ke_p,sigma_p)
+    Q_Current_from_proposed = proposal_prob(theta1,theta1_p,sigma_p)*proposal_prob(theta2,theta2_p,sigma_p)
     #Q(theta'|theta)
-    Q_Proposed_from_current = proposal_prob(ka_p,ka,sigma_p)*proposal_prob(ke_p,ke,sigma_p)
+    Q_Proposed_from_current = proposal_prob(theta1_p,theta1,sigma_p)*proposal_prob(theta2_p,theta2,sigma_p)
     
     # 2. Compute likelihood with proposed parameters
     # 2a. Evaluate model
-    x_p = model(ka_p,ke_p,t,X0)
     # 2b. compute likelihood with proposed parameters
-    l_p = likelihood(x_p,data,sigma_L) 
+    l_p = likelihood(theta1_p,theta2_p) 
     # 2c. compute prior of proposed parameters
-    Prior_theta_p = prior(min1,max1,ka_p) * prior(min2,max2,ke_p)
+    Prior_theta_p = prior(theta1_p,mu1,sigma1_sq) * prior(theta2_p,mu2,sigma2_sq)
     
     # Compute L * v (likelihood times prior)
     posterior_p = Prior_theta_p * l_p
 
     #3. Compute acceptance criterion
-    rho = min(1,posterior_p*Q_Current_from_proposed/(posterior*Q_Proposed_from_current))
+    rho = min(1,(Q_Current_from_proposed/Q_Proposed_from_current)*(Prior_theta_p/Prior_theta)*np.exp(-l_p+l_a))
     # 4.
     u = np.random.rand()
-    
+
     # 5. Accept new parameters
     if u < rho:
         naccept += 1
-        ka = ka_p
-        ke = ke_p
+        theta1 = theta1_p
+        theta2 = theta2_p
         posterior = posterior_p
-        theta = [ka,ke]
+        l_a = l_p
+        theta = [theta1,theta2]
     # Store parameters only after burn-in phase
     if i > burnin:
         Theta_s.append(theta)
     Acc_t.append(naccept)
-np.savetxt('Task3ParamEstimates.txt',Theta_s,delimiter = ',',fmt='%1.2f');	
+np.savetxt('Project2.txt',Theta_s,delimiter = ',',fmt='%1.2f');	
 #### End of Metropolis Hastings ####
 # comment out below for plots #
 

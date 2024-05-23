@@ -13,8 +13,8 @@ In = np.loadtxt('Input.txt')
 np.random.seed(seed=int(In))
 
 #set initial parameter estimates
-theta1 = 30*np.random.rand()
-theta2 = 3*np.random.rand()
+theta1 = 25*np.random.rand()
+theta2 = 1*np.random.rand()
 
 
 Y = np.array([108,108,101,108,109,91,108,97,92,98])

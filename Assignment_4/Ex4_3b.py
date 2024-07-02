@@ -78,7 +78,7 @@ max2 = 1
 sigma_p = 0.05
 
 # parameters for likelihood
-sigma_L = 10
+sigma_L = 15
 
 #model  x(t) = 
 def model(ka,ke,t,X0):

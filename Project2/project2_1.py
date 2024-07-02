@@ -59,7 +59,7 @@ sigma2_sq = 10
 
 def prior(theta, mu,sigma_sq):
     exp_up = -(((theta-mu)**2)/(2*sigma_sq))
-    return (1/math.sqrt(2*sigma_sq*math.pi))*np.exp(exp_up)
+    return (1/2 *np.log(2*sigma_sq*math.pi)) + (exp_up)
 
 
 l_range = np.linspace(5, 30, 100)

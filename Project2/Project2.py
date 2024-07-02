@@ -20,7 +20,7 @@ Y = np.array([108,108,101,108,109,91,108,97,92,98])
 t = 100
 
 #settings of the metropolis hastings algorithm
-niters = 10#
+niters = 9#
 burnin = -1#np.round(0.9*niters)
 
 #for evaluating the performance [optional]
@@ -83,10 +83,19 @@ for i in range(niters):
     # 1. propose parameters 
     theta1_p = np.random.normal(theta1,sigma_p)     
     theta2_p = np.random.normal(theta2,sigma_p)                            # <-----------
-    if theta1_p<0 or theta2_p<0:
-        if i > burnin:
-            Theta_s.append(theta)
-        continue
+    
+    # If negative -> redraw
+    while theta1_p<0 or theta2_p<0:
+        theta1_p = np.random.normal(theta1,sigma_p)     
+        theta2_p = np.random.normal(theta2,sigma_p)   
+    
+    # # If negative -> skip
+    # if theta1_p<0 or theta2_p<0:
+    #     if i > burnin:
+    #         Theta_s.append(theta)
+    #     continue
+
+
     # 1b. Compute Proposal distributions: 
     # Q(theta|theta')
     Q_Current_from_proposed = proposal_prob(theta1,theta1_p,sigma_p)*proposal_prob(theta2,theta2_p,sigma_p)

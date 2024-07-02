@@ -19,7 +19,7 @@ ke = 0.3
 # loads the input data
 t, data = np.load('Data.npy')
 #settings of the metropolis hastings algorithm
-niters = 10#
+niters = 10000#
 burnin = -1#np.round(0.9*niters)
 
 #for evaluating the performance [optional]
@@ -96,6 +96,9 @@ def prior(min,max,y):
 #proposal distribution probability (for one parameter)
 def proposal_prob(toParam,fromParam,sigma_p):
     p = stats.norm.pdf(np.log(toParam),loc= np.log(fromParam),scale =sigma_p)
+    q = stats.norm.pdf(np.log(fromParam),loc= np.log(toParam),scale =sigma_p)
+    if p!=q:
+        print("yay")
     return p
 
 ### Begin of Metropolis Hastings Algorithm ###
@@ -127,7 +130,7 @@ for i in range(niters):
     Q_Current_from_proposed = proposal_prob(ka,ka_p,sigma_p)*proposal_prob(ke,ke_p,sigma_p)
     #Q(theta'|theta)
     Q_Proposed_from_current = proposal_prob(ka_p,ka,sigma_p)*proposal_prob(ke_p,ke,sigma_p)
-    
+    assert proposal_prob(ka,ka_p,sigma_p) == proposal_prob(ka_p,ka,sigma_p), "Qs are different!!"
     # 2. Compute likelihood with proposed parameters
     # 2a. Evaluate model
     x_p = model(ka_p,ke_p,t,X0)

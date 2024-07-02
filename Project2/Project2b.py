@@ -13,8 +13,8 @@ In = np.loadtxt('Input.txt')
 np.random.seed(seed=int(In))
 
 #set initial parameter estimates
-theta1 = 25*np.random.rand()
-theta2 = 1*np.random.rand()
+theta1 = 30*np.random.rand()
+theta2 = 3*np.random.rand()
 
 
 Y = np.array([108,108,101,108,109,91,108,97,92,98])
@@ -84,11 +84,19 @@ for i in range(niters):
     # 1. propose parameters 
     theta1_p = np.random.normal(theta1,sigma_p)     
     theta2_p = np.random.normal(theta2,sigma_p)                            # <-----------
-    if theta1_p<0 or theta2_p<0:
-        if i > burnin:
-            Theta_s.append(theta)
-        Acc_t.append(naccept)
-        continue
+   
+    # If negative -> redraw
+    while theta1_p<0 or theta2_p<0:
+        theta1_p = np.random.normal(theta1,sigma_p)     
+        theta2_p = np.random.normal(theta2,sigma_p)   
+    
+    # # If negative -> skip
+    # if theta1_p<0 or theta2_p<0:
+    #     if i > burnin:
+    #         Theta_s.append(theta)
+    #     Acc_t.append(naccept)
+    #     continue
+
     # 1b. Compute Proposal distributions: 
     # Q(theta|theta')
     Q_Current_from_proposed = proposal_prob(theta1,theta1_p,sigma_p)*proposal_prob(theta2,theta2_p,sigma_p)
@@ -122,6 +130,9 @@ for i in range(niters):
     if i > burnin:
         Theta_s.append(theta)
     Acc_t.append(naccept)
+
+np.savetxt('Project2b.txt',Theta_s,delimiter = ',',fmt='%1.2f');	
+
 
 #### End of Metropolis Hastings ####
 # comment out below for plots #
